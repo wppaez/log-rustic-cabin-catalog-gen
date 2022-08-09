@@ -15,7 +15,7 @@ def process_csv(path:str, output:str):
     df['Variant Inventory Qty'] = 1000
     test= df.groupby('Variant SKU').cumcount()+1
     df['Variant SKU']= df['Variant SKU'].str[:-2] + test.astype('string').str.pad(width=2,fillchar='0')
-    df.to_csv(f'{output}/{path}', index=False, encoding='utf-8', sep=";")
+    df.to_csv(f'{output}/{path}', index= False, encoding='utf_8_sig', sep=";")
     print('DONE')
 
 def main():
