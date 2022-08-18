@@ -1,9 +1,9 @@
-#import libraries
+# import libraries
 import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Dict, Literal, List, Union
 
 import pandas as pd
 import numpy as np
@@ -43,30 +43,48 @@ def extract_number(value: str):
     return int(matches[0])
 
 
-def format_option_value(value: str) -> Dict[str, Union[str, int]]:
+def format_option_value(index: int, value: str) -> Dict[str, Union[str, int]]:
     additional_rate = extract_number(value)
     formatted_value = value.replace(f'(+{additional_rate})', '').strip()
 
     return {
         "value": formatted_value,
-        "additional_rate": additional_rate
+        "additional_rate": additional_rate,
+        "alias": f'Option{index + 1} Value'
     }
 
 
-def get_options_catalog(codes: List[str]) -> List[Dict[str, Union[str, List[str]]]]:
+SKU_OPTION_KEYS = Literal['alias', 'length', 'value', 'additional_rate']
+SKU_OPTION_VALUE = Dict[SKU_OPTION_KEYS, Union[str, int]]
+SKU_OPTION_KEY = Literal['name', 'alias', 'values']
+SKU_OPTION = Dict[SKU_OPTION_KEY, Union[str, List[SKU_OPTION_VALUE]]]
+SKU_KEY = Literal['code', 'options', 'basic_rate']
+SKU_VALUE = Union[int, str, List[SKU_OPTION]]
+SKU = Dict[SKU_KEY, SKU_VALUE]
+
+
+def get_options_catalog(codes: List[str]) -> List[SKU]:
     search_column = 'code (Variant SKU)'
     target_column = 'options'
     catalog = pd.read_csv(f'static/catalog.csv', encoding='utf-8', sep=',')
-    raw_rows: List[str] = list(
-        catalog.loc[catalog[search_column].isin(codes), target_column])
+    catalog_mask = catalog[search_column].isin(codes)
+    match = catalog.loc[catalog_mask, [search_column, target_column]]
+    searchable = match.set_index([search_column])
+
+    raw_rows: List[str] = list(searchable.loc[codes][target_column])
     option_lines: List[List[str]] = [
         list(filter(None, raw_row.splitlines())) for raw_row in raw_rows]
 
-    def remove_quote(x): return x.replace('"', '')
-    options_raw = [[list(map(remove_quote, value.split('" "')))
-                    for value in line] for line in option_lines]
-    options_as_dict = [[{"name": values[0], "values": values[1:]}
-                        for values in lines] for lines in options_raw]
+    remove_quote = lambda x: x.replace('"', '')
+    options_raw = [
+        [list(map(remove_quote, re.split(r'"\s+"', value))) for value in line]
+        for line in option_lines
+    ]
+
+    options_as_dict = [
+        [{"name": values[0], "values": values[1:]} for values in lines]
+        for lines in options_raw
+    ]
 
     skus = []
     for index, option_dict in enumerate(options_as_dict):
@@ -76,21 +94,25 @@ def get_options_catalog(codes: List[str]) -> List[Dict[str, Union[str, List[str]
         })
 
     for sku in skus:
-        for option in sku['options']:
-            option['values'] = list(map(format_option_value, option['values']))
+        for (index, option) in enumerate(sku['options']):
+            value_indexes = range(len(option['values']))
 
-    # for sku in skus:
-    #     print('-----------------')
-    #     print(f'    {sku["code"]}')
-    #     for option in sku['options']:
-    #         print(f'  - {option["name"]}')
-    #         for value in option['values']:
-    #             print(f'  ---- {value["value"]}, +{value["additional_rate"]}')
-    #         print('  -')
-    return skus
+            option['values'] = list(map(format_option_value,
+                                        value_indexes,
+                                        option['values']))
+            option['length'] = len(option['values'])
+            option['alias'] = f'Option{index + 1} Name'
+        sku['option_length'] = len(sku['options'])
+
+    return []
 
 
-def fill_basic_rate(options: List[Dict[str, Union[str, List[str]]]]) -> List[Dict[str, Union[str, List[str]]]]:
+def fill_basic_rate(options: List[SKU]) -> List[SKU]:
+    original = pd.read_csv(f'static/catalog.csv', encoding='utf-8', sep=',')
+    pass
+
+
+def get_output_columns(skus):
     pass
 
 
