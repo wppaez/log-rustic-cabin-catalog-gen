@@ -1,8 +1,9 @@
 #import libraries
-from pyexpat.errors import codes
+import os
+import re
 import shutil
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Union
 
 import pandas as pd
 import numpy as np
@@ -10,8 +11,11 @@ import numpy as np
 
 def folder_setup() -> str:
     cwd = Path.cwd()
-    output_folder = (cwd/'./output').resolve()
-    shutil.rmtree(output_folder)
+    output_folder = (cwd / './output').resolve()
+
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+
     Path(output_folder).mkdir(exist_ok=True)
     return str(output_folder)
 
@@ -21,7 +25,35 @@ def verbose(filename: str):
     print(df.columns)
 
 
-def get_options_catalog(codes: List[str]):
+def get_codes_from_original(filename: str) -> List[str]:
+    code_column = 'Variant SKU'
+    df = pd.read_csv(f'input/{filename}.csv', encoding='utf-8', sep=',')
+    codes = df[code_column].str[:-3].unique()
+    return codes
+
+
+def extract_number(value: str):
+    matches = re.findall(r'\+\d+', value)
+
+    if matches is None:
+        return 0
+    if len(matches) == 0:
+        return 0
+
+    return int(matches[0])
+
+
+def format_option_value(value: str) -> Dict[str, Union[str, int]]:
+    additional_rate = extract_number(value)
+    formatted_value = value.replace(f'(+{additional_rate})', '').strip()
+
+    return {
+        "value": formatted_value,
+        "additional_rate": additional_rate
+    }
+
+
+def get_options_catalog(codes: List[str]) -> List[Dict[str, Union[str, List[str]]]]:
     search_column = 'code (Variant SKU)'
     target_column = 'options'
     catalog = pd.read_csv(f'static/catalog.csv', encoding='utf-8', sep=',')
@@ -44,27 +76,33 @@ def get_options_catalog(codes: List[str]):
         })
 
     for sku in skus:
-        print('-----------------')
-        print(f'    {sku["code"]}')
         for option in sku['options']:
-            print(option)
+            option['values'] = list(map(format_option_value, option['values']))
+
+    # for sku in skus:
+    #     print('-----------------')
+    #     print(f'    {sku["code"]}')
+    #     for option in sku['options']:
+    #         print(f'  - {option["name"]}')
+    #         for value in option['values']:
+    #             print(f'  ---- {value["value"]}, +{value["additional_rate"]}')
+    #         print('  -')
+    return skus
 
 
-def get_codes_from_original(filename: str) -> List[str]:
-    code_column = 'Variant SKU'
-    df = pd.read_csv(f'input/{filename}.csv', encoding='utf-8', sep=',')
-    codes = df[code_column].str[:-3].unique()
-    return codes
+def fill_basic_rate(options: List[Dict[str, Union[str, List[str]]]]) -> List[Dict[str, Union[str, List[str]]]]:
+    pass
 
 
 def main():
     output = folder_setup()
     debug = False
     filename = 'bedroom_sets_20220531_Wendy'
-    if(debug):
+    if (debug):
         verbose(filename=filename)
     codes = get_codes_from_original(filename=filename)
-    get_options_catalog(codes=codes)
+    options = get_options_catalog(codes=codes)
+    options = fill_basic_rate(options)
     pass
 
 
