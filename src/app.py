@@ -125,19 +125,46 @@ def get_output_columns(filename: str, skus: List[SKU]) -> List[str]:
     return cols
 
 
+def format_options_to_dict(option):
+    value_dict = {idx: value for (idx, value) in enumerate(option["values"])}
+    return {
+        option["name"]: value_dict
+    }
+
+
 def build_output(columns: List[str], skus: List[SKU]):
     output_df = pd.DataFrame(columns=columns)
 
     ram = {}
+    separator = '|||'
     for sku in skus:
         ram['Variant SKU'] = sku['code']
-        merged = [[value["value"] for value in option["values"]]
+        merged = [[f'{option["name"]}{separator}{value["value"]}' for value in option["values"]]
                   for option in sku['options']]
 
         combinations = itertools.product(*merged)
 
+        col_map = {option["name"]: option["alias"]
+                   for option in sku['options']}
+        rate_map = {option["name"]: {value["value"]: value["additional_rate"]
+                                     for value in option["values"]}
+                    for option in sku['options']}
+
+        print(json.dumps({"col_map": col_map}))
+        # print(json.dumps({"sku_map": sku_map}))
+        print('---')
+
         for combiation in combinations:
-            pass
+            row_payload = {"rate": 0}
+            for item in combiation:
+                opt_key, opt_val = item.split(separator)
+                col_name = col_map[opt_key]
+                col_value = col_map[opt_key].replace('Name', 'Value')
+                row_payload[col_name] = opt_key
+                row_payload[col_value] = opt_val
+                row_payload["rate"] += rate_map[opt_key][opt_val]
+            print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+            print(json.dumps({"row_payload": row_payload}))
 
     # for option in sku['options']:
 
