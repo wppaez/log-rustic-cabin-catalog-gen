@@ -1,6 +1,7 @@
 # import libraries
 import os
 import re
+import json
 import shutil
 from pathlib import Path
 from typing import Dict, Literal, List, Union
@@ -18,11 +19,6 @@ def folder_setup() -> str:
 
     Path(output_folder).mkdir(exist_ok=True)
     return str(output_folder)
-
-
-def verbose(filename: str):
-    df = pd.read_csv(f'input/{filename}.csv', encoding='utf-8', sep=',')
-    print(df.columns)
 
 
 def get_codes_from_original(filename: str) -> List[str]:
@@ -104,27 +100,43 @@ def get_options_catalog(codes: List[str]) -> List[SKU]:
             option['alias'] = f'Option{index + 1} Name'
         sku['option_length'] = len(sku['options'])
 
-    return []
+    return skus
 
 
-def fill_basic_rate(options: List[SKU]) -> List[SKU]:
-    original = pd.read_csv(f'static/catalog.csv', encoding='utf-8', sep=',')
+def fill_basic_rate(filename: str, skus: List[SKU]) -> List[SKU]:
+    df = pd.read_csv(f'input/{filename}.csv', encoding='utf-8', sep=',')
     pass
 
 
-def get_output_columns(skus):
-    pass
+def get_output_columns(filename: str, skus: List[SKU]) -> List[str]:
+    df = pd.read_csv(f'input/{filename}.csv', encoding='utf-8', sep=',')
+    cols: List[str] = df.columns.to_list()
+
+    option_lengths = list(map(lambda x: x['option_length'], skus))
+    max_options = max(option_lengths)
+    option_cols = []
+    for i in range(max_options):
+        option_cols.append(f'Option{i + 1} Name')
+        option_cols.append(f'Option{i + 1} Value')
+
+    old_index = [i for i, col in enumerate(cols) if col.startswith('Option')]
+
+    cols[old_index[0]: old_index[-1]] = option_cols
+
+    return cols
 
 
 def main():
     output = folder_setup()
-    debug = False
+
     filename = 'bedroom_sets_20220531_Wendy'
-    if (debug):
-        verbose(filename=filename)
+
     codes = get_codes_from_original(filename=filename)
-    options = get_options_catalog(codes=codes)
-    options = fill_basic_rate(options)
+    skus = get_options_catalog(codes=codes)
+    output_columns = get_output_columns(filename=filename, skus=skus)
+    print(output_columns)
+    # print(json.dumps({"skus": skus}))
+    # skus = fill_basic_rate(filename, options)
     pass
 
 
