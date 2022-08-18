@@ -3,6 +3,7 @@ import os
 import re
 import json
 import shutil
+import itertools
 from pathlib import Path
 from typing import Dict, Literal, List, Union
 
@@ -132,13 +133,20 @@ def build_output(columns: List[str], skus: List[SKU]):
     ram = {}
     for sku in skus:
         ram['Variant SKU'] = sku['code']
+        merged = [[value["value"] for value in option["values"]]
+                  for option in sku['options']]
 
-        for option in sku['options']:
+        combinations = itertools.product(*merged)
 
-            ram[option['alias']] = sku['code']
-            for value in option['values']:
-                ram[value['alias']] = value['value']
-                print(ram)
+        for combiation in combinations:
+            pass
+
+    # for option in sku['options']:
+
+    #     ram[option['alias']] = sku['code']
+    #     for value in option['values']:
+    #         ram[value['alias']] = value['value']
+    #         print(ram)
 
 
 def main():
