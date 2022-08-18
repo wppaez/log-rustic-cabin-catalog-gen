@@ -128,8 +128,6 @@ def get_output_columns(filename: str, skus: List[SKU]) -> List[str]:
 def build_output(columns: List[str], skus: List[SKU]):
     output_df = pd.DataFrame(columns=columns)
 
-    # No se como generar bien las filas :C
-
     ram = {}
     for sku in skus:
         ram['Variant SKU'] = sku['code']
