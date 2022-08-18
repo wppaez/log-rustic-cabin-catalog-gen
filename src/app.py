@@ -39,14 +39,13 @@ def extract_number(value: str):
     return int(matches[0])
 
 
-def format_option_value(index: int, value: str) -> Dict[str, Union[str, int]]:
+def format_option_value(value: str) -> Dict[str, Union[str, int]]:
     additional_rate = extract_number(value)
     formatted_value = value.replace(f'(+{additional_rate})', '').strip()
 
     return {
         "value": formatted_value,
         "additional_rate": additional_rate,
-        "alias": f'Option{index + 1} Value'
     }
 
 
@@ -91,13 +90,12 @@ def get_options_catalog(codes: List[str]) -> List[SKU]:
 
     for sku in skus:
         for (index, option) in enumerate(sku['options']):
-            value_indexes = range(len(option['values']))
-
-            option['values'] = list(map(format_option_value,
-                                        value_indexes,
-                                        option['values']))
+            option['values'] = list(map(format_option_value, option['values']))
             option['length'] = len(option['values'])
             option['alias'] = f'Option{index + 1} Name'
+
+            for value in option['values']:
+                value['alias'] = f'Option{index + 1} Value'
         sku['option_length'] = len(sku['options'])
 
     return skus
@@ -126,6 +124,23 @@ def get_output_columns(filename: str, skus: List[SKU]) -> List[str]:
     return cols
 
 
+def build_output(columns: List[str], skus: List[SKU]):
+    output_df = pd.DataFrame(columns=columns)
+
+    # No se como generar bien las filas :C
+
+    ram = {}
+    for sku in skus:
+        ram['Variant SKU'] = sku['code']
+
+        for option in sku['options']:
+
+            ram[option['alias']] = sku['code']
+            for value in option['values']:
+                ram[value['alias']] = value['value']
+                print(ram)
+
+
 def main():
     output = folder_setup()
 
@@ -134,7 +149,8 @@ def main():
     codes = get_codes_from_original(filename=filename)
     skus = get_options_catalog(codes=codes)
     output_columns = get_output_columns(filename=filename, skus=skus)
-    print(output_columns)
+    # print(output_columns)
+    build_output(columns=output_columns, skus=skus)
     # print(json.dumps({"skus": skus}))
     # skus = fill_basic_rate(filename, options)
     pass
