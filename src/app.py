@@ -294,6 +294,7 @@ def main():
                              skus=skus,
                              option_columns=option_columns)
 
+    print("Writing CSV...")
     output_df.to_csv(f'{output}/{filename}_from_catalog.csv',
                      index=False, sep=",", encoding='utf-8')
 
