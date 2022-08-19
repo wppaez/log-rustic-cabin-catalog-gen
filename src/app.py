@@ -273,6 +273,7 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
 
             rows.append(row_payload)
 
+        print(f'  - {combination_size}/{combination_size} (100%)')
     output_df = pd.DataFrame.from_dict(rows)
     output_df = output_df.reindex(columns=columns)
     return output_df
