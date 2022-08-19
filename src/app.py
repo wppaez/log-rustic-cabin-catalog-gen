@@ -107,7 +107,9 @@ def get_options_catalog(codes: List[str]) -> List[SKU]:
     return skus
 
 
-def cast_as_int_if_possible(value):
+def cast_as_int_if_possible(source, value):
+    if source == 'Published':
+        return value
     try:
         parsed = int(value)
         return parsed
@@ -172,7 +174,8 @@ def fill_sku_data_from_original(filename: str, skus: List[SKU]) -> List[SKU]:
 
         for source_col in source_cols:
 
-            formatted_value = cast_as_int_if_possible(original_raw[source_col])
+            formatted_value = cast_as_int_if_possible(
+                source_col, original_raw[source_col])
 
             sku["replacements"].append({
                 "column": source_col,
@@ -228,12 +231,13 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
                     for option in sku['options']}
 
         combination_size = len(combinations)
+        digits = len(f'{combination_size}')
         ratio = math.floor(1000 / combination_size)
         reminder = 1000 - (ratio * len(combinations))
 
         should_log = 0
         for (index, combiation) in enumerate(combinations):
-            combination_number = f'{index +1}'.rjust(2, '0')
+            combination_number = f'{index +1}'.rjust(digits, '0')
 
             current_progress = (index + 1) / combination_size
             if (should_log < current_progress):
