@@ -11,8 +11,8 @@ from typing import Dict, Literal, List, Union
 import numpy as np
 import pandas as pd
 
-# import json
-# import pyperclip as pc
+import json
+import pyperclip as pc
 
 
 def folder_setup() -> str:
@@ -295,6 +295,8 @@ def main():
 
     output_df.to_csv(f'{output}/{filename}_from_catalog.csv',
                      index=False, sep=",", encoding='utf-8')
+
+    pc.copy(json.dumps({"data": skus}))
     print("CSV Generated!")
 
     return 0
