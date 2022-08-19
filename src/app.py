@@ -109,7 +109,7 @@ def get_options_catalog(codes: List[str]) -> List[SKU]:
 
 def cast_as_int_if_possible(source, value):
     if source == 'Published':
-        return value
+        return f'value'
     try:
         parsed = int(value)
         return parsed
@@ -214,6 +214,8 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
     separator = '|||'
 
     rows = []
+    output_dfs = []
+    row_limit = 2048
     for sku in skus:
         print(f'Processing {sku["code"]}:')
 
@@ -276,11 +278,30 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
                     row_payload[missing_column] = ''
 
             rows.append(row_payload)
+            if (len(rows) > row_limit):
+                output_df = pd.DataFrame.from_dict(rows)
+                output_df = output_df.reindex(columns=columns)
+                output_dfs.append(output_df)
+                rows = []
 
         print(f'  - {combination_size}/{combination_size} (100%)')
-    output_df = pd.DataFrame.from_dict(rows)
-    output_df = output_df.reindex(columns=columns)
-    return output_df
+
+    return output_dfs
+
+
+def save_dataframes(output_folder: str, filename: str, output_dfs: List[pd.DataFrame]):
+    to_write = len(output_dfs)
+    should_log = 0
+    for index, df in enumerate(output_dfs):
+        current_progress = (index + 1) / to_write
+        if (should_log < current_progress or index + 1 == to_write):
+            print(
+                f'  > Writing CSV #{(index + 1)} of {to_write} ({current_progress *100}%)'
+            )
+            should_log += 0.25
+
+        df.to_csv(f'{output_folder}/{filename}_{index + 1}_from_catalog.csv',
+                  index=False, sep=",", encoding='utf-8')
 
 
 def main():
@@ -294,16 +315,17 @@ def main():
     output_columns, option_columns = get_output_columns(filename=filename,
                                                         skus=skus)
 
-    output_df = build_output(columns=output_columns,
-                             skus=skus,
-                             option_columns=option_columns)
+    output_dfs = build_output(columns=output_columns,
+                              skus=skus,
+                              option_columns=option_columns)
 
-    print("Writing CSV...")
-    output_df.to_csv(f'{output}/{filename}_from_catalog.csv',
-                     index=False, sep=",", encoding='utf-8')
+    print("Writing CSVs...")
+    save_dataframes(output_folder=output,
+                    filename=filename,
+                    output_dfs=output_dfs)
 
     pc.copy(json.dumps({"data": skus}))
-    print("CSV Generated!")
+    print("CSVs Generated!")
 
     return 0
 
