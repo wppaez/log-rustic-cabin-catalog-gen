@@ -108,8 +108,20 @@ def get_options_catalog(codes: List[str]) -> List[SKU]:
 
 
 def cast_as_int_if_possible(source, value):
-    if source == 'Published':
-        return f'value'
+    columns = {
+        "Published": "TRUE",
+        "Variant Requires Shipping": "TRUE",
+        "Variant Taxable": "FALSE",
+        "Gift Card": "FALSE",
+    }
+    
+    colNames = list(columns.keys())
+    if source in colNames:
+        # print(source)
+        # print(columns[source])
+        # input('Press ENTER to continue...')
+
+        return columns[source]
     try:
         parsed = int(value)
         return parsed
@@ -198,7 +210,10 @@ def get_output_columns(filename: str, skus: List[SKU]) -> List[str]:
 
     old_index = [i for i, col in enumerate(cols) if col.startswith('Option')]
 
-    cols[old_index[0]: old_index[-1]] = option_cols
+    # for index in old_index:
+    #     print(cols[index])
+
+    cols[old_index[0]: old_index[-1] + 1] = option_cols
 
     return (cols, option_cols)
 
@@ -250,6 +265,13 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
             row_payload = {}
             row_payload["Variant SKU"] = f'{sku["code"]}-{combination_number}'
 
+            # pc.copy(json.dumps({
+            #     "combinations": combinations, 
+            #     "col_map": col_map,
+            #     "rate_map": rate_map
+            # }))
+            # input('Press ENTER to continue...')
+
             extra_rate = 0
             for item in combiation:
                 opt_key, opt_val = item.split(separator)
@@ -281,6 +303,9 @@ def build_output(columns: List[str], skus: List[SKU], option_columns: List[str])
             if (len(rows) > row_limit):
                 output_df = pd.DataFrame.from_dict(rows)
                 output_df = output_df.reindex(columns=columns)
+                # pc.copy(json.dumps({"cols": columns}))
+                # input("Press ENTER to continue...")
+
                 output_dfs.append(output_df)
                 rows = []
 
@@ -314,6 +339,9 @@ def main():
     skus = fill_sku_data_from_original(filename=filename, skus=skus)
     output_columns, option_columns = get_output_columns(filename=filename,
                                                         skus=skus)
+
+    # pc.copy(json.dumps({"output_columns": output_columns}))
+    # input('Aguanta el burro horacio!')
 
     output_dfs = build_output(columns=output_columns,
                               skus=skus,
